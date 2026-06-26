@@ -20,6 +20,14 @@ To build a modern AI-powered decision support system that applies Agent Engineer
 
 ---
 
+## Project Scope
+
+This project demonstrates the application of modern Agent Engineering concepts to container terminal operational planning through an AI-powered decision support system.
+
+The repository focuses on software engineering practices, modular architecture, iterative development, and practical implementation using Google AI Studio.
+
+---
+
 ## Objectives
 
 * Develop an AI-powered operational planning assistant.
