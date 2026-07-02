@@ -73,12 +73,28 @@ export default function App() {
     totalHours: number;
     considerations: string[];
     reason: string;
+
+    // Card 2: Quay Crane Allocation
+    recommendedAllocation: string;
+    resourceAvailability: string;
+    allocationReason: string;
+
+    // Card 3: Risk Assessment
+    riskLevel: 'Low Risk' | 'Medium Risk' | 'High Risk';
+    keyBottlenecks: string[];
+    mitigations: string[];
+
+    // Card 4: Decision Support
+    recommendedAction: string;
+    executiveSummary: string;
+    nextStep: string;
   }
 
   // Simulation / Interactive States
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [hasRun, setHasRun] = useState<boolean>(false);
+  const [isPlanGenerated, setIsPlanGenerated] = useState<boolean>(false);
   const [analysisResult, setAnalysisResult] = useState<VesselAnalysis | null>(null);
   const [systemLogs, setSystemLogs] = useState<string[]>([
     "System initialized. Core UI module loaded.",
@@ -112,100 +128,143 @@ export default function App() {
     setSystemLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 8)]);
   };
 
-  const handleGeneratePlan = (e: FormEvent) => {
-    e.preventDefault();
-    if (!vesselName.trim()) {
-      alert("Please enter a Vessel Name");
-      return;
-    }
+  const handleGeneratePlan = (e?: any) => {
+    try {
+      if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
+      if (e && typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
+      if (!vesselName || !vesselName.trim()) {
+        alert("Please enter a Vessel Name");
+        return;
+      }
 
-    setIsAnalyzing(true);
-    setProgress(0);
-    setHasRun(false);
-    addLog(`Initiating operational plan generation for ${vesselName}...`);
+      addLog(`Initiating operational plan generation for ${vesselName}...`);
+      addLog("Analyzing berth availability and scheduling conflicts...");
+      addLog(`Evaluating quay crane dispatch models for ${availableCranes} crane(s)...`);
+      addLog("Performing risk matrix and dwell-time simulation...");
 
-    // Parse estimated workload safely
-    const workloadNum = parseInt(estimatedWorkload.replace(/[^0-9]/g, "")) || 1500;
-    
-    let classification = "Panamax Class (Medium Workload)";
-    if (workloadNum < 1500) {
-      classification = "Feeder Class (Light Workload)";
-    } else if (workloadNum > 2800) {
-      classification = "Post-Panamax Class (High Workload)";
-    }
+      // Parse estimated workload safely
+      const workloadNum = parseInt(String(estimatedWorkload || "1500").replace(/[^0-9]/g, "")) || 1500;
+      
+      // Low / Moderate / High workload assessment based on guidelines
+      let classification = "Moderate Workload";
+      if (workloadNum > 2000) {
+        classification = "High Workload";
+      } else if (workloadNum < 1000) {
+        classification = "Low Workload";
+      }
 
-    const ratePerCraneHour = 28;
-    const net = Math.round((workloadNum / (availableCranes * ratePerCraneHour)) * 10) / 10;
-    const buffer = 1.5;
-    const total = Math.round((net + buffer) * 10) / 10;
+      // Estimate operation duration using Estimated Workload divided by Available Quay Cranes divided by 25 TEUs per crane-hour.
+      const calculatedDuration = Math.round((workloadNum / (availableCranes * 25)) * 10) / 10;
+      const net = calculatedDuration;
+      const buffer = 1.5;
+      const total = Math.round((net + buffer) * 10) / 10;
 
-    const considerations: string[] = [];
-    const notesLower = operationalNotes.toLowerCase();
-    
-    if (notesLower.includes("reefer")) {
-      considerations.push("Priority reefer power connection required at berth sector.");
-    }
-    if (notesLower.includes("rail") || notesLower.includes("train")) {
-      considerations.push("Sync discharge sequencing with terminal railway timetable.");
-    }
-    if (notesLower.includes("tide") || notesLower.includes("draft") || notesLower.includes("depth")) {
-      considerations.push("Constrained tidal window alert. Maintain real-time depth monitoring.");
-    }
-    if (notesLower.includes("hazardous") || notesLower.includes("danger") || notesLower.includes("dg")) {
-      considerations.push("Secure Class 9 hazardous area clearance protocols before unloading.");
-    }
-    if (availableCranes >= 6) {
-      considerations.push("High density crane usage: verify anti-collision limits between booms.");
-    }
-    
-    // Fallback considerations if we need more or have none
-    if (considerations.length < 2) {
-      considerations.push("Enforce minimum crane clearance interval of 3 bays to optimize gantries.");
-      considerations.push("Pre-stage yard slots in block C-4 for immediate crane discharge flow.");
-    }
-    if (considerations.length < 3) {
-      considerations.push("Verify lashers and deck crew standby schedule 30 minutes before first lift.");
-    }
+      const considerations: string[] = [];
+      const notesLower = String(operationalNotes || "").toLowerCase();
+      
+      if (notesLower.includes("reefer")) {
+        considerations.push("Priority reefer power connection required at berth sector.");
+      }
+      if (notesLower.includes("rail") || notesLower.includes("train")) {
+        considerations.push("Sync discharge sequencing with terminal railway timetable.");
+      }
+      if (notesLower.includes("tide") || notesLower.includes("draft") || notesLower.includes("depth")) {
+        considerations.push("Constrained tidal window alert. Maintain real-time depth monitoring.");
+      }
+      if (notesLower.includes("hazardous") || notesLower.includes("danger") || notesLower.includes("dg")) {
+        considerations.push("Secure Class 9 hazardous area clearance protocols before unloading.");
+      }
+      if (availableCranes >= 6) {
+        considerations.push("High density crane usage: verify anti-collision limits between booms.");
+      }
+      
+      // Fallback considerations if we need more or have none
+      if (considerations.length < 2) {
+        considerations.push("Enforce minimum crane clearance interval of 3 bays to optimize gantries.");
+        considerations.push("Pre-stage yard slots in block C-4 for immediate crane discharge flow.");
+      }
+      if (considerations.length < 3) {
+        considerations.push("Verify lashers and deck crew standby schedule 30 minutes before first lift.");
+      }
 
-    const reason = `Analysis initiated to optimize berth dwell times for the scheduled arrival of ${vesselName}. Adjusting crane counts to maintain line-haul service recovery margins and prevent downstream terminal congestion.`;
+      const reason = `This recommendation is generated for ${vesselName} based on the input workload of ${workloadNum} TEUs and ${availableCranes} active crane(s). The allocation achieves an optimal discharge rate while safeguarding terminal gantry resources, adjusting berth dwell times to fit specified operational notes.`;
 
-    const result: VesselAnalysis = {
-      name: vesselName,
-      workload: workloadNum,
-      cranes: availableCranes,
-      notes: operationalNotes,
-      classification,
-      netHours: net,
-      bufferHours: buffer,
-      totalHours: total,
-      considerations,
-      reason
-    };
+      // Card 2: Quay Crane Allocation
+      const recommendedAllocation = `Allocate ${availableCranes} Quay Crane(s) to ${vesselName}`;
+      const resourceAvailability = `Utilizing ${availableCranes} of 8 available terminal gantries. Remaining pool is sufficient for concurrent berthings.`;
+      const allocationReason = `Optimizes moves-per-hour to target the ${total}-hour turnaround window without overloading berth logistics.`;
 
-    // Simulate progress sequence
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsAnalyzing(false);
-          setAnalysisResult(result);
-          setHasRun(true);
-          addLog("Plan generation complete. Vessel planning model compiled successfully.");
-          return 100;
+      // Card 3: Risk Assessment
+      let riskLevel: 'Low Risk' | 'Medium Risk' | 'High Risk' = 'Low Risk';
+      const keyBottlenecks: string[] = [];
+      const mitigations: string[] = [];
+
+      if (availableCranes < 4) {
+        riskLevel = 'Medium Risk';
+        keyBottlenecks.push("Crane Shortage: Low crane count increases risk of demurrage delay.");
+        mitigations.push("Request standby gantry operator team to enable continuous shifts.");
+      }
+
+      const mentionsRiskKeywords = ["priority", "reefer", "delay", "congestion", "fast turnaround"].some(keyword => notesLower.includes(keyword));
+
+      if (mentionsRiskKeywords) {
+        riskLevel = availableCranes < 4 ? 'High Risk' : 'Medium Risk';
+        if (notesLower.includes("reefer")) {
+          keyBottlenecks.push("Reefer Power Demands: Active reefers require immediate plug-in yards.");
+          mitigations.push("Pre-cool active reefer stacks in Block B and verify slot availability.");
         }
-        
-        // Add log triggers during progress
-        if (prev === 20) {
-          addLog("Analyzing berth availability and scheduling conflicts...");
-        } else if (prev === 50) {
-          addLog(`Evaluating quay crane dispatch models for ${availableCranes} crane(s)...`);
-        } else if (prev === 80) {
-          addLog("Performing risk matrix and dwell-time simulation...");
+        if (notesLower.includes("delay") || notesLower.includes("congestion") || notesLower.includes("fast turnaround") || notesLower.includes("priority")) {
+          keyBottlenecks.push("Berth Turnaround Pressure: High priority discharge timeline.");
+          mitigations.push("Prioritize high-stack deck bays first to optimize gantry flow.");
         }
+      }
 
-        return prev + 10;
-      });
-    }, 150);
+      if (keyBottlenecks.length === 0) {
+        keyBottlenecks.push("No major bottlenecks identified. Normal operational conditions apply.");
+        mitigations.push("Monitor real-time gantry move rates via standard terminal telemetry logs.");
+      }
+
+      // Card 4: Decision Support
+      const recommendedAction = `Approve Berthing Plan & Dispatch ${availableCranes} Gantry Cranes`;
+      const executiveSummary = `Discharge and load ${workloadNum} TEUs for ${vesselName} using ${availableCranes} cranes. Target completion time is ${total} hours.`;
+      const nextStep = `Transmit digital work sequence manifests to Gantry Cranes 1-${availableCranes} command deck.`;
+
+      const result: VesselAnalysis = {
+        name: vesselName,
+        workload: workloadNum,
+        cranes: availableCranes,
+        notes: operationalNotes,
+        classification,
+        netHours: net,
+        bufferHours: buffer,
+        totalHours: total,
+        considerations,
+        reason,
+        recommendedAllocation,
+        resourceAvailability,
+        allocationReason,
+        riskLevel,
+        keyBottlenecks,
+        mitigations,
+        recommendedAction,
+        executiveSummary,
+        nextStep
+      };
+
+      setIsAnalyzing(false);
+      setProgress(100);
+      setHasRun(true);
+      setIsPlanGenerated(true);
+      setAnalysisResult(result);
+      addLog("Plan generation complete. Vessel planning model compiled successfully.");
+    } catch (err) {
+      console.error("Error generating plan:", err);
+      addLog(`Error during plan generation: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const handleReset = () => {
@@ -216,6 +275,7 @@ export default function App() {
     setHasRun(false);
     setProgress(0);
     setAnalysisResult(null);
+    setIsPlanGenerated(false);
     addLog("Form and outputs reset to empty standby.");
   };
 
@@ -473,6 +533,7 @@ export default function App() {
                     <div className="pt-2 flex flex-col sm:flex-row gap-3">
                       <button
                         type="submit"
+                        onClick={handleGeneratePlan}
                         disabled={isAnalyzing}
                         className={`flex-1 relative flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-bold text-white transition-all shadow-sm ${
                           isAnalyzing 
@@ -589,6 +650,48 @@ export default function App() {
               )}
             </AnimatePresence>
 
+            {/* Skill Execution Summary Panel & Informational Banner */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 shadow-xs space-y-4" id="skill-execution-summary-panel">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 font-display">Skill Execution Summary</h4>
+                <div className="mt-3">
+                  {isPlanGenerated ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg py-2 px-3">
+                        <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                        <span>Vessel Planning</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg py-2 px-3">
+                        <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                        <span>Quay Crane Allocation</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg py-2 px-3">
+                        <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                        <span>Risk Assessment</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg py-2 px-3">
+                        <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                        <span>Decision Support</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-500 bg-slate-100 border border-slate-200 rounded-lg py-2.5 px-4">
+                      <span className="inline-block w-2 h-2 rounded-full bg-slate-400 animate-pulse"></span>
+                      <span>Waiting for operational analysis...</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Informational Banner */}
+              <div className="pt-3 flex items-start gap-2.5 text-xs text-slate-600 bg-amber-50/50 -mx-5 -mb-5 p-4 rounded-b-xl border-t border-slate-200/80">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="leading-relaxed font-medium">
+                  AI-generated operational recommendations must be reviewed by a human planner before execution.
+                </p>
+              </div>
+            </div>
+
             {/* Grid for the 4 Mandatory Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="dss-outputs-grid">
               
@@ -597,27 +700,30 @@ export default function App() {
                 className={`bg-white rounded-xl border p-5 shadow-xs transition-all ${
                   isAnalyzing 
                     ? 'border-amber-300 ring-2 ring-amber-50' 
-                    : hasRun 
+                    : isPlanGenerated 
                     ? 'border-sky-300 ring-2 ring-sky-50' 
                     : 'border-slate-200 hover:border-slate-300'
                 }`}
                 id="vessel-planning-card"
               >
                 <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg mt-0.5">
                       <Ship className="w-4 h-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">1. Vessel Planning</h3>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">Vessel Planning Skill</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Analyses vessel workload and berth occupancy.</p>
+                    </div>
                   </div>
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                    isAnalyzing ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                    isAnalyzing ? 'bg-amber-100 text-amber-700' : isPlanGenerated ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
                   }`}>
-                    {isAnalyzing ? "ANALYZING" : "STANDBY"}
+                    {isAnalyzing ? "Status: ANALYZING" : isPlanGenerated ? "Status: COMPLETED" : "Status: STANDBY"}
                   </span>
                 </div>
                 
-                {hasRun && analysisResult ? (
+                {isPlanGenerated && analysisResult ? (
                   <div className="space-y-4 text-left animate-fadeIn">
                     
                     {/* 1. Vessel Workload Assessment */}
@@ -663,9 +769,9 @@ export default function App() {
                       </ul>
                     </div>
 
-                    {/* 4. Reason for the Analysis */}
+                    {/* 4. Reason for Recommendation */}
                     <div className="border-t border-slate-100 pt-3">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">4. Reason for the Analysis</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">4. Reason for Recommendation</div>
                       <p className="text-[11px] text-slate-500 italic leading-relaxed">
                         "{analysisResult.reason}"
                       </p>
@@ -693,104 +799,239 @@ export default function App() {
 
               {/* Card 2: Quay Crane Allocation */}
               <div 
-                className="bg-white rounded-xl border border-slate-200 hover:border-slate-300 p-5 shadow-xs transition-all"
+                className={`bg-white rounded-xl border p-5 shadow-xs transition-all ${
+                  isAnalyzing 
+                    ? 'border-amber-300 ring-2 ring-amber-50' 
+                    : isPlanGenerated 
+                    ? 'border-sky-300 ring-2 ring-sky-50' 
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
                 id="crane-allocation-card"
               >
                 <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg mt-0.5">
                       <Cpu className="w-4 h-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">2. Quay Crane Allocation</h3>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">Quay Crane Allocation Skill</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Optimises quay crane allocation.</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                    STANDBY
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                    isAnalyzing ? 'bg-amber-100 text-amber-700' : isPlanGenerated ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {isAnalyzing ? "Status: ANALYZING" : isPlanGenerated ? "Status: COMPLETED" : "Status: STANDBY"}
                   </span>
                 </div>
                 
-                <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
-                  <div className="relative">
-                    <div className="p-4 rounded-full bg-slate-50 text-slate-400">
-                      <Cpu className="w-8 h-8" />
+                {isPlanGenerated && analysisResult ? (
+                  <div className="space-y-4 text-left animate-fadeIn">
+                    {/* Recommended Crane Allocation */}
+                    <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recommended Crane Allocation</div>
+                      <div className="font-semibold text-xs text-slate-800 mt-1">
+                        {analysisResult.recommendedAllocation}
+                      </div>
+                    </div>
+
+                    {/* Resource Availability */}
+                    <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Resource Availability</div>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                        {analysisResult.resourceAvailability}
+                      </p>
+                    </div>
+
+                    {/* Allocation Reason */}
+                    <div className="border-t border-slate-100 pt-3">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Allocation Reason</div>
+                      <p className="text-[11px] text-slate-500 italic leading-relaxed">
+                        "{analysisResult.allocationReason}"
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-slate-700 font-mono tracking-tight">
-                      "Waiting for analysis..."
-                    </p>
-                    <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                      Awaiting crane availability input to generate work schedules and bay priorities.
-                    </p>
+                ) : (
+                  <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
+                    <div className="relative">
+                      <div className="p-4 rounded-full bg-slate-50 text-slate-400">
+                        <Cpu className="w-8 h-8" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-slate-700 font-mono tracking-tight">
+                        "Waiting for analysis..."
+                      </p>
+                      <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                        Awaiting crane availability input to generate work schedules and bay priorities.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Card 3: Risk Assessment */}
               <div 
-                className="bg-white rounded-xl border border-slate-200 hover:border-slate-300 p-5 shadow-xs transition-all"
+                className={`bg-white rounded-xl border p-5 shadow-xs transition-all ${
+                  isAnalyzing 
+                    ? 'border-amber-300 ring-2 ring-amber-50' 
+                    : isPlanGenerated 
+                    ? 'border-sky-300 ring-2 ring-sky-50' 
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
                 id="risk-assessment-card"
               >
                 <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-2 bg-rose-50 text-rose-600 rounded-lg mt-0.5">
                       <AlertTriangle className="w-4 h-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">3. Risk Assessment</h3>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">Risk Assessment Skill</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Evaluates operational risks.</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                    STANDBY
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                    isAnalyzing ? 'bg-amber-100 text-amber-700' : isPlanGenerated ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {isAnalyzing ? "Status: ANALYZING" : isPlanGenerated ? "Status: COMPLETED" : "Status: STANDBY"}
                   </span>
                 </div>
                 
-                <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
-                  <div className="relative">
-                    <div className="p-4 rounded-full bg-slate-50 text-slate-400">
-                      <AlertTriangle className="w-8 h-8" />
+                {isPlanGenerated && analysisResult ? (
+                  <div className="space-y-4 text-left animate-fadeIn">
+                    {/* Risk Level */}
+                    <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Risk Level</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`inline-block w-2.5 h-2.5 rounded-full ${
+                          analysisResult.riskLevel === 'High Risk' ? 'bg-rose-500 animate-pulse' : analysisResult.riskLevel === 'Medium Risk' ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}></span>
+                        <span className={`font-bold text-xs ${
+                          analysisResult.riskLevel === 'High Risk' ? 'text-rose-700' : analysisResult.riskLevel === 'Medium Risk' ? 'text-amber-700' : 'text-emerald-700'
+                        }`}>
+                          {analysisResult.riskLevel}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Key Bottlenecks */}
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Key Bottlenecks</div>
+                      <ul className="space-y-1">
+                        {analysisResult.keyBottlenecks.map((b, i) => (
+                          <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                            <span className="text-rose-500 font-bold shrink-0 mt-0.5">•</span>
+                            <span>{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Mitigation Suggestions */}
+                    <div className="border-t border-slate-100 pt-3">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Mitigation Suggestions</div>
+                      <ul className="space-y-1">
+                        {analysisResult.mitigations.map((m, i) => (
+                          <li key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+                            <span className="text-emerald-500 font-bold shrink-0 mt-0.5">✓</span>
+                            <span>{m}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-slate-700 font-mono tracking-tight">
-                      "Waiting for analysis..."
-                    </p>
-                    <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                      Evaluates potential scheduling clash, tidal risks, and wind load thresholds.
-                    </p>
+                ) : (
+                  <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
+                    <div className="relative">
+                      <div className="p-4 rounded-full bg-slate-50 text-slate-400">
+                        <AlertTriangle className="w-8 h-8" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-slate-700 font-mono tracking-tight">
+                        "Waiting for analysis..."
+                      </p>
+                      <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                        Evaluates potential scheduling clash, tidal risks, and wind load thresholds.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Card 4: Decision Support */}
               <div 
-                className="bg-white rounded-xl border border-slate-200 hover:border-slate-300 p-5 shadow-xs transition-all"
+                className={`bg-white rounded-xl border p-5 shadow-xs transition-all ${
+                  isAnalyzing 
+                    ? 'border-amber-300 ring-2 ring-amber-50' 
+                    : isPlanGenerated 
+                    ? 'border-sky-300 ring-2 ring-sky-50' 
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
                 id="decision-support-card"
               >
                 <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg mt-0.5">
                       <Database className="w-4 h-4" />
                     </div>
-                    <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">4. Decision Support</h3>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">Decision Support Skill</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Generates operational recommendations.</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                    STANDBY
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                    isAnalyzing ? 'bg-amber-100 text-amber-700' : isPlanGenerated ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {isAnalyzing ? "Status: ANALYZING" : isPlanGenerated ? "Status: COMPLETED" : "Status: STANDBY"}
                   </span>
                 </div>
                 
-                <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
-                  <div className="relative">
-                    <div className="p-4 rounded-full bg-slate-50 text-slate-400">
-                      <Database className="w-8 h-8" />
+                {isPlanGenerated && analysisResult ? (
+                  <div className="space-y-4 text-left animate-fadeIn">
+                    {/* Recommended Action */}
+                    <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recommended Action</div>
+                      <div className="font-semibold text-xs text-indigo-800 mt-1 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span>{analysisResult.recommendedAction}</span>
+                      </div>
+                    </div>
+
+                    {/* Executive Summary */}
+                    <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Executive Summary</div>
+                      <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                        {analysisResult.executiveSummary}
+                      </p>
+                    </div>
+
+                    {/* Next Step */}
+                    <div className="border-t border-slate-100 pt-3">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Next Step</div>
+                      <p className="text-[11px] text-slate-700 font-mono leading-relaxed bg-slate-50 p-2 rounded border border-slate-100">
+                        {analysisResult.nextStep}
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-slate-700 font-mono tracking-tight">
-                      "Waiting for analysis..."
-                    </p>
-                    <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                      Consolidates operational sequence models and recommends action plans.
-                    </p>
+                ) : (
+                  <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
+                    <div className="relative">
+                      <div className="p-4 rounded-full bg-slate-50 text-slate-400">
+                        <Database className="w-8 h-8" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-slate-700 font-mono tracking-tight">
+                        "Waiting for analysis..."
+                      </p>
+                      <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                        Consolidates operational sequence models and recommends action plans.
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
             </div>
