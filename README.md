@@ -135,11 +135,3 @@ This project is being developed as the Capstone submission for Google's:
 
 AI Engineer | Product Manager | MSc Data Science & AI
 
-Research interests include:
-
-- AI-powered Decision Support Systems
-- Agent Engineering
-- Container Terminal Operations
-- Maritime AI
-- Explainable AI
-- Human-Centred AI
