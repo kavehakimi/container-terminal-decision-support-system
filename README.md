@@ -1,67 +1,54 @@
-# Container Terminal Decision Support System
+# 🚢 Container Terminal Decision Support System
 
-> A Capstone project developed during Google's **5-Day AI Agents Intensive Vibe Coding Course**.
+> AI-powered operational planning prototype for container terminals.
+
+---
 
 ## Overview
 
-The **Container Terminal Decision Support System** is a lightweight AI-powered prototype designed to demonstrate how Agent Engineering concepts can support operational planning in container terminals.
+The **Container Terminal Decision Support System** is an AI-powered prototype developed as the Capstone project for Google's **5-Day AI Agents: Intensive Vibe Coding Course**.
 
-The project follows a **Spec-Driven Development (SDD)** approach and is being developed incrementally through documented iterations.
+The project demonstrates how modern AI Agent concepts can support operational planning by transforming operational inputs into structured decision-support recommendations through a modular dashboard.
 
-Rather than building a production-ready system, the goal is to demonstrate the practical application of modern AI Agent concepts including:
+The application is being developed incrementally using a **Spec-Driven Development (SDD)** methodology.
 
-- Agent-based system design
-- Skill-based architecture
-- Human-in-the-Loop decision support
-- Secure AI development principles
-- Incremental software engineering
-- AI-assisted application development
+---
+
+## Features
+
+Current implementation includes:
+
+- 🚢 Vessel Planning
+- ⚓ Quay Crane Allocation
+- ⚠️ Risk Assessment
+- 📊 Decision Support
+- 📝 Operational Input Form
+- 📱 Responsive Dashboard
+- ⚙️ Deterministic Operational Logic
+
+Planned enhancements:
+
+- Skill-Based Architecture
+- Human-in-the-Loop Workflow
+- AI Safety Features
+- Explainability
+- Evaluation Metrics
+- Observability
 
 ---
 
 ## Project Status
 
-**Current Version:** Capstone MVP (Version 2)
-
-Current progress:
-
-- ✅ Software Requirements Specification (SRS)
-- ✅ System Architecture
-- ✅ Requirements Traceability Matrix (RTM)
-- ✅ GitHub project structure
-- ✅ Iteration 1 – MVP User Interface
-- 🔄 Iteration 2 – Operational Logic (In Progress)
-- ⏳ Iteration 3 – Skill-Based Decision Support
-- ⏳ Iteration 4 – Human-in-the-Loop
-- ⏳ Iteration 5 – Security, Evaluation & Final Polish
-
----
-
-## Features (Planned)
-
-- Vessel Planning
-- Quay Crane Allocation
-- Risk Assessment
-- Decision Support
-- Human-in-the-Loop Review
-- Secure AI Recommendations
-- Modular Skill-Based Architecture
-
----
-
-## Project Structure
-
-```text
-docs/
-prompts/
-screenshots/
-src/
-assets/
-
-README.md
-SRS.md
-architecture.md
-```
+| Component | Status |
+|-----------|--------|
+| Software Requirements Specification (SRS) | ✅ Complete |
+| Software Architecture | ✅ Complete |
+| Requirements Traceability Matrix (RTM) | ✅ Complete |
+| Iteration 1 – Core Application | ✅ Complete |
+| Iteration 2 – Operational Dashboard | ✅ Complete |
+| Iteration 3 – Operational Skills | 🔄 In Progress |
+| Iteration 4 – Human-in-the-Loop | ⏳ Planned |
+| Iteration 5 – Security & Evaluation | ⏳ Planned |
 
 ---
 
@@ -77,33 +64,50 @@ architecture.md
 
 ---
 
-## Development Methodology
+## Development Workflow
 
-This project follows an incremental **Spec-Driven Development (SDD)** workflow.
+This project follows an incremental **Spec-Driven Development (SDD)** process.
 
-Each iteration includes:
+Each iteration follows the same workflow:
 
-1. Requirements
-2. AI Studio Prompt
-3. Prototype Generation
-4. Testing
-5. Documentation
-6. Source Code Export
-7. Git Commit & Push
+1. Define Requirements
+2. Write AI Studio Prompt
+3. Generate Prototype
+4. Validate Functionality
+5. Capture Screenshots
+6. Export Source Code
+7. Update Documentation
+8. Commit & Push to GitHub
 
 ---
 
-## Design Philosophy
+## Repository Structure
 
-The project prioritises:
+```text
+docs/
+prompts/
+screenshots/
+src/
+assets/
 
+README.md
+SRS.md
+architecture.md
+```
+
+---
+
+## Design Principles
+
+This project is designed around the following principles:
+
+- Modular Development
+- Skill-Based Design
+- Human-Centred Decision Support
+- Incremental Delivery
+- Maintainability
 - Simplicity
 - Reliability
-- Incremental development
-- Maintainability
-- Demonstration of AI Agent concepts
-
-instead of implementing a production-scale container terminal system.
 
 ---
 
@@ -113,19 +117,19 @@ This repository contains:
 
 - Source Code
 - Software Requirements Specification (SRS)
-- System Architecture
-- Requirements Traceability Matrix
+- Software Architecture
+- Requirements Traceability Matrix (RTM)
 - Iteration Documentation
 - Screenshots
-- Prompt History
+- AI Studio Prompt History
 
 ---
 
 ## Course
 
-This project is being developed as the Capstone submission for Google's:
+Developed as the Capstone project for:
 
-**5-Day AI Agents: Intensive Vibe Coding Course**
+**Google — 5-Day AI Agents: Intensive Vibe Coding Course**
 
 ---
 
@@ -135,3 +139,8 @@ This project is being developed as the Capstone submission for Google's:
 
 AI Engineer | Product Manager | MSc Data Science & AI
 
+---
+
+## License
+
+This repository is intended for educational, research, and portfolio purposes.

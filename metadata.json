@@ -1,6 +1,6 @@
 {
   "name": "Container Terminal Decision Support System",
-  "description": "AI-powered operational planning prototype for container terminals.",
+  "description": "An operational decision support prototype for container terminal planning, featuring vessel scheduling, quay crane allocation, and risk assessment dashboards.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
