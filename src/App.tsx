@@ -21,7 +21,11 @@ import {
   TrendingUp,
   Sliders,
   ChevronRight,
-  Database
+  Database,
+  Check,
+  UserCheck,
+  Shield,
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -101,6 +105,7 @@ export default function App() {
     "Ready for planning inputs."
   ]);
   const [activeTab, setActiveTab] = useState<'editor' | 'presets'>('editor');
+  const [decisionStatus, setDecisionStatus] = useState<'Pending Review' | 'Approved' | 'Re-analysis Requested' | 'Waiting' | 'Modify Inputs'>('Waiting');
 
   // Real-time clock state for visual fidelity
   const [time, setTime] = useState<string>("");
@@ -126,6 +131,45 @@ export default function App() {
   const addLog = (message: string) => {
     const timestamp = new Date().toISOString().substring(11, 19);
     setSystemLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 8)]);
+  };
+
+  const getDecisionConfidence = () => {
+    const workloadNum = parseInt(String(estimatedWorkload || "1500").replace(/[^0-9]/g, "")) || 1500;
+    const cranes = availableCranes;
+    const notesLower = String(operationalNotes || "").toLowerCase();
+    
+    let confidence = 90;
+    
+    const teusPerCrane = workloadNum / (cranes || 1);
+    if (teusPerCrane > 600) {
+      confidence -= 4;
+    } else if (teusPerCrane < 300) {
+      confidence += 2;
+    }
+    
+    if (notesLower.includes("reefer")) confidence -= 1;
+    if (notesLower.includes("hazardous") || notesLower.includes("danger") || notesLower.includes("dg")) confidence -= 2;
+    if (notesLower.includes("rail") || notesLower.includes("train")) confidence -= 1;
+    if (notesLower.includes("tide") || notesLower.includes("draft") || notesLower.includes("depth")) confidence -= 2;
+    if (notesLower.includes("priority")) confidence += 1;
+    
+    if (cranes < 3) {
+      confidence -= 3;
+    } else if (cranes > 5) {
+      confidence += 2;
+    }
+    
+    return Math.min(95, Math.max(80, confidence));
+  };
+
+  const getReasoningSummary = () => {
+    if (!analysisResult) return "";
+    const workloadNum = analysisResult.workload;
+    const cranes = analysisResult.cranes;
+    const total = analysisResult.totalHours;
+    const net = analysisResult.netHours;
+    const buffer = analysisResult.bufferHours;
+    return `The algorithm recommends dispatching ${cranes} Quay Crane(s) to process the workload of ${workloadNum.toLocaleString()} TEUs. This achieves a calculated net operating duration of ${net} hours. Factoring in a fixed ${buffer}-hour buffer for terminal congestion and safety protocols, the total turnaround window is estimated at ${total} hours, minimizing demurrage risk.`;
   };
 
   const handleGeneratePlan = (e?: any) => {
@@ -260,6 +304,7 @@ export default function App() {
       setHasRun(true);
       setIsPlanGenerated(true);
       setAnalysisResult(result);
+      setDecisionStatus('Pending Review');
       addLog("Plan generation complete. Vessel planning model compiled successfully.");
     } catch (err) {
       console.error("Error generating plan:", err);
@@ -276,6 +321,7 @@ export default function App() {
     setProgress(0);
     setAnalysisResult(null);
     setIsPlanGenerated(false);
+    setDecisionStatus('Waiting');
     addLog("Form and outputs reset to empty standby.");
   };
 
@@ -1034,6 +1080,282 @@ export default function App() {
                 )}
               </div>
 
+            </div>
+
+            {/* Human Review Panel */}
+            <div 
+              className="bg-white rounded-xl border border-slate-200 p-5 mt-6 shadow-xs"
+              id="human-review-panel"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg mt-0.5">
+                    <UserCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">Human Review</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Authorize or request modifications to the generated operational plan.</p>
+                  </div>
+                </div>
+
+                {isPlanGenerated && (
+                  <div className="flex items-center gap-2" id="decision-status-container">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Decision Status:</span>
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                      decisionStatus === 'Approved' 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        : decisionStatus === 'Re-analysis Requested' 
+                        ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`} id="decision-status-badge">
+                      {decisionStatus === 'Approved' 
+                        ? 'Approved' 
+                        : decisionStatus === 'Re-analysis Requested' 
+                        ? 'Re-analysis Requested' 
+                        : 'Pending Review'
+                      }
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {!isPlanGenerated ? (
+                <div className="py-6 flex flex-col items-center justify-center text-center space-y-2">
+                  <div className="p-3 rounded-full bg-slate-50 text-slate-400">
+                    <Clock className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</div>
+                    <p className="text-sm font-semibold text-slate-700">Waiting for operational analysis.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-3">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</span>
+                      <span className="text-sm font-bold text-slate-800 mt-0.5 block font-mono">
+                        {decisionStatus === 'Approved' && "Approved"}
+                        {decisionStatus === 'Re-analysis Requested' && "Re-analysis Requested"}
+                        {decisionStatus === 'Pending Review' && "Pending Human Review"}
+                        {decisionStatus === 'Modify Inputs' && "Pending Human Review"}
+                      </span>
+                    </div>
+
+                    {/* Feedback Messages */}
+                    {decisionStatus === 'Approved' && (
+                      <div className="flex items-start gap-2.5 text-xs text-emerald-800 bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 animate-fadeIn" id="approved-message">
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <p className="font-semibold">
+                          Operational plan approved by human operator.
+                        </p>
+                      </div>
+                    )}
+
+                    {decisionStatus === 'Re-analysis Requested' && (
+                      <div className="flex items-start gap-2.5 text-xs text-rose-800 bg-rose-50/50 p-3 rounded-lg border border-rose-100 animate-fadeIn" id="reanalysis-message">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                        <p className="font-semibold">
+                          The operator requested a new operational assessment.
+                        </p>
+                      </div>
+                    )}
+
+                    {decisionStatus === 'Modify Inputs' && (
+                      <div className="flex items-start gap-2.5 text-xs text-sky-800 bg-sky-50/50 p-3 rounded-lg border border-sky-100 animate-fadeIn" id="modify-message">
+                        <Sliders className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+                        <p className="font-semibold">
+                          Please modify the operational parameters and generate a new plan.
+                        </p>
+                      </div>
+                    )}
+
+                    {decisionStatus === 'Pending Review' && (
+                      <div className="flex items-start gap-2.5 text-xs text-slate-600 bg-slate-100/50 p-3 rounded-lg border border-slate-200 animate-fadeIn" id="pending-message">
+                        <Clock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+                        <p className="font-medium">
+                          Operational plan is ready for operator authorization. Select an action below to complete the planning loop.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDecisionStatus('Approved');
+                        addLog("Human operator: Approved the operational plan.");
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border shadow-xs ${
+                        decisionStatus === 'Approved'
+                          ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30'
+                      }`}
+                      id="approve-plan-button"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Approve Plan</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDecisionStatus('Re-analysis Requested');
+                        addLog("Human operator: Requested plan re-analysis.");
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border shadow-xs ${
+                        decisionStatus === 'Re-analysis Requested'
+                          ? 'bg-rose-600 hover:bg-rose-700 border-rose-600 text-white'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-rose-300 hover:bg-rose-50/30'
+                      }`}
+                      id="request-reanalysis-button"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Request Re-analysis</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDecisionStatus('Modify Inputs');
+                        addLog("Human operator: Requested modification of inputs.");
+                        document.getElementById('input-section')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border shadow-xs ${
+                        decisionStatus === 'Modify Inputs'
+                          ? 'bg-sky-600 hover:bg-sky-700 border-sky-600 text-white'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-sky-300 hover:bg-sky-50/30'
+                      }`}
+                      id="modify-inputs-button"
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>Modify Inputs</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Decision Transparency Panel */}
+            <div 
+              className="bg-white rounded-xl border border-slate-200 p-5 mt-6 shadow-xs animate-fadeIn"
+              id="decision-transparency-panel"
+            >
+              <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-4">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg mt-0.5">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 text-sm tracking-tight font-display">Decision Transparency</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Understand the metrics, factors, and assumptions behind the operational model.</p>
+                  </div>
+                </div>
+              </div>
+
+              {!isPlanGenerated ? (
+                <div className="py-6 flex flex-col items-center justify-center text-center space-y-2">
+                  <div className="p-3 rounded-full bg-slate-50 text-slate-400">
+                    <Info className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</div>
+                    <p className="text-sm font-semibold text-slate-700">Waiting for operational analysis to compute transparency metrics.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left Column: Confidence and Reasoning */}
+                    <div className="space-y-4">
+                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Decision Confidence</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl font-extrabold text-slate-800 font-display">
+                            Confidence: {getDecisionConfidence()}%
+                          </span>
+                          <div className="flex-1">
+                            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                              <div 
+                                className="bg-indigo-600 h-2 rounded-full transition-all duration-1000" 
+                                style={{ width: `${getDecisionConfidence()}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-2">Calculated deterministically based on resource ratios and input constraints complexity.</p>
+                      </div>
+                      
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Reasoning Summary</span>
+                        <p className="text-xs text-slate-600 leading-relaxed bg-indigo-50/30 p-3.5 rounded-lg border border-indigo-50 font-medium">
+                          {getReasoningSummary()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Decision Factors & Assumptions */}
+                    <div className="space-y-4">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Primary Decision Factors</span>
+                        <ul className="space-y-2">
+                          <li className="flex items-start gap-2 text-xs text-slate-600">
+                            <span className="text-indigo-500 font-bold mt-0.5 shrink-0">•</span>
+                            <div>
+                              <span className="font-semibold text-slate-800">Estimated Workload</span>
+                              <span className="block text-[11px] text-slate-500">Volume intensity: {analysisResult ? `${analysisResult.workload.toLocaleString()} TEUs (${analysisResult.classification})` : ""}</span>
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2 text-xs text-slate-600">
+                            <span className="text-indigo-500 font-bold mt-0.5 shrink-0">•</span>
+                            <div>
+                              <span className="font-semibold text-slate-800">Available Quay Cranes</span>
+                              <span className="block text-[11px] text-slate-500">Resource constraint: {analysisResult ? `${analysisResult.cranes} crane(s) allocated` : ""}</span>
+                            </div>
+                          </li>
+                          <li className="flex items-start gap-2 text-xs text-slate-600">
+                            <span className="text-indigo-500 font-bold mt-0.5 shrink-0">•</span>
+                            <div>
+                              <span className="font-semibold text-slate-800">Operational Constraints</span>
+                              <span className="block text-[11px] text-slate-500">
+                                {analysisResult && (analysisResult.notes.toLowerCase().includes("reefer") || analysisResult.notes.toLowerCase().includes("priority") || analysisResult.notes.toLowerCase().includes("hazardous")) 
+                                  ? "Additional custom handling and safety requirements parsed from notes" 
+                                  : "Standard vessel berthing and clearance protocols applied"}
+                              </span>
+                            </div>
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Operational Assumptions</span>
+                        <ul className="space-y-1.5 text-xs text-slate-600">
+                          <li className="flex items-start gap-2">
+                            <span className="text-slate-400 font-bold shrink-0">-</span>
+                            <span>Stable weather conditions</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-slate-400 font-bold shrink-0">-</span>
+                            <span>Normal crane availability</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-slate-400 font-bold shrink-0">-</span>
+                            <span>No unexpected equipment failures</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Informational Note */}
+                  <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-start gap-2 text-[11px] text-slate-500 leading-relaxed bg-slate-50/50 -mx-5 -mb-5 p-4 rounded-b-xl">
+                    <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                    <span>This explanation is generated by the prototype to improve transparency and operator understanding.</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Quick Reference Guide or Instruction Panel */}
