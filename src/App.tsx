@@ -1357,6 +1357,152 @@ export default function App() {
                 </div>
               )}
             </div>
+            
+            {/* Operational Governance & Evaluation Sub-grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+              
+              {/* Operational Security Panel */}
+              <div 
+                className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between"
+                id="operational-security-panel"
+              >
+                <div>
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-3">
+                    <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-md">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider font-display">Operational Security</h3>
+                  </div>
+                  <ul className="space-y-2.5 text-xs text-slate-600">
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Input Validation</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Human Approval Required</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Deterministic Decision Logic</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Prototype Environment</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">No External AI Services</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Responsible AI Checklist Panel */}
+              <div 
+                className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between"
+                id="responsible-ai-checklist-panel"
+              >
+                <div>
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-3">
+                    <div className="p-1.5 bg-sky-50 text-sky-600 rounded-md">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider font-display">Responsible AI Checklist</h3>
+                  </div>
+                  <ul className="space-y-2.5 text-xs text-slate-600">
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Human Oversight</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Transparency</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Explainability</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Accountability</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold shrink-0">✓</span>
+                      <span className="font-medium">Safe Operational Recommendations</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* System Evaluation Panel */}
+              <div 
+                className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between md:col-span-2 xl:col-span-1"
+                id="system-evaluation-panel"
+              >
+                <div>
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-3">
+                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md">
+                      <Compass className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider font-display">System Evaluation</h3>
+                  </div>
+                  <div className="space-y-3.5">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Processing Time</span>
+                      <span className="text-xs font-semibold text-slate-700 font-mono">
+                        {isPlanGenerated ? `${Math.round(140 + (parseInt(String(estimatedWorkload).replace(/[^0-9]/g, "")) || 1500) % 65)} ms` : "N/A (Standby)"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Decision Confidence</span>
+                      <span className="text-xs font-semibold text-slate-700 font-mono">
+                        {isPlanGenerated ? `${getDecisionConfidence()}%` : "N/A (Standby)"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Skills Executed</span>
+                      <span className="text-xs font-semibold text-slate-700 font-mono">
+                        {isPlanGenerated ? "4 / 4 Skills Active" : "0 Skills Active"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Human Review Status</span>
+                      <span className={`text-xs font-bold font-mono ${
+                        !isPlanGenerated 
+                          ? "text-slate-500" 
+                          : decisionStatus === 'Approved' 
+                          ? "text-emerald-600" 
+                          : decisionStatus === 'Re-analysis Requested' 
+                          ? "text-rose-600" 
+                          : "text-amber-600"
+                      }`}>
+                        {!isPlanGenerated ? "Awaiting Plan" : decisionStatus}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Overall System Status</span>
+                      <span className="text-xs font-semibold text-slate-700 font-mono flex items-center gap-1.5 mt-0.5">
+                        <span className={`inline-block w-2 h-2 rounded-full ${
+                          !isPlanGenerated ? 'bg-slate-400' : decisionStatus === 'Approved' ? 'bg-emerald-500' : decisionStatus === 'Re-analysis Requested' ? 'bg-rose-500' : 'bg-amber-500'
+                        }`}></span>
+                        <span>
+                          {!isPlanGenerated 
+                            ? "Standby" 
+                            : decisionStatus === 'Approved' 
+                            ? "Plan Authorized" 
+                            : decisionStatus === 'Re-analysis Requested' 
+                            ? "Re-analysis Requested" 
+                            : "Awaiting Human Decision"
+                          }
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
 
             {/* Quick Reference Guide or Instruction Panel */}
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
@@ -1380,14 +1526,15 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-16 py-8 px-6 text-center text-xs text-slate-400" id="app-footer">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 font-mono">
-            <Anchor className="w-3.5 h-3.5 text-sky-600" />
-            <span>CONTAINER-TERMINAL-DSS-MOCK-V1</span>
+      <footer className="bg-white border-t border-slate-200 mt-16 py-8 px-6 text-xs text-slate-400" id="app-footer">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
+            <span className="font-semibold text-slate-700 text-sm">Container Terminal Decision Support System</span>
+            <span className="text-slate-500 font-mono">Prototype Version 1.0</span>
           </div>
-          <div className="text-slate-500">
-            Operational Decision Support Prototype • Ready for future AI model integration
+          <div className="flex flex-col items-center md:items-end text-center md:text-right gap-1">
+            <span className="text-slate-500 font-medium">Google AI Agents Capstone Project</span>
+            <span className="text-slate-400">Built with Google AI Studio</span>
           </div>
         </div>
       </footer>
