@@ -103,7 +103,7 @@ docs/
 ├── roadmap.md
 ├── iterations.md
 ├── evaluation.md
-├── lessons-learned.md
+└── lessons-learned.md
 prompts/
 ├── iteration-1.md
 ├── iteration-2.md
